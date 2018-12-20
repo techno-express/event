@@ -76,6 +76,27 @@ class Promise
 		$childLoop = $this->isEventLoopAvailable($loop) ? $loop : $childLoop;		
 		$this->loop = $this->isEventLoopAvailable($childLoop) ? $childLoop : Loop\instance();
 		
+		/**
+		* The difference in Guzzle promise implementations mainly lay in the construction.
+		* According to https://github.com/promises-aplus/constructor-spec/issues/18 it's not valid.
+		*
+		* The wait method in Guzzle is necessary under certain callable functions situations. 
+		* Mainly when passing an promise object not fully created, itself. 
+		*
+		* The constructor will fail it's execution when trying to access member method that's null:
+		* <code>
+		*	$callableAndNullMethodAccess = new Promise(function () use (&$callableAndNullMethodAccess){ 
+		*		$callableAndNullMethodAccess->resolve('Runtime Error'); 
+		*	});
+		* </code>
+		*
+		* The following routine adds the callback resolver to the event loop.
+		* 
+		* And since an promise is attached to an running event loop, 
+		* no need to start the promises fate. The wait function/method Guzzle have both starts 
+		* and stops promise execution, however the promise implementation should still 
+		* be able run without, should be an optional execution point controlled by the developer.
+		*/
 		$this->waitFn = is_callable($callExecutor) ? $callExecutor : null;
 		$this->cancelFn = is_callable($callCanceller) ? $callCanceller : null;		
 	
